@@ -5,125 +5,93 @@ import glob
 from gtts import gTTS
 from PIL import Image
 import base64
-from pydub import AudioSegment  # Importamos pydub para los efectos
 
-st.title("Conversión de Texto a Audio con Efectos")
+# --- NUEVOS TEXTOS DE AUTOAYUDA Y MOTIVACIÓN ---
+st.title("Tu Espacio de Inspiración y Calma 🌻")
 
-# Manejo de la imagen (comentado por si no tienes el archivo a mano)
+# Nota: Recuerda cambiar 'gato_raton.png' por una imagen acorde al tema (ej. un paisaje, meditación, etc.)
+# Si no tienes la imagen en tu carpeta, Streamlit mostrará un error, asegúrate de agregarla.
 try:
-    image = Image.open('gato_raton.png')
+    image = Image.open('motivacion.png')
     st.image(image, width=350)
-except FileNotFoundError:
-    st.warning("Imagen 'gato_raton.png' no encontrada.")
+except:
+    pass # Evita que la app falle si aún no pones una imagen llamada motivacion.png
 
 with st.sidebar:
-    st.subheader("Escribe y/o selecciona texto para ser escuchado.")
+    st.subheader("Escribe o selecciona afirmaciones positivas para escucharlas en voz alta y reprogramar tu mente.")
 
-# Crear carpeta temporal si no existe
-if not os.path.exists("temp"):
+try:
     os.mkdir("temp")
+except:
+    pass
 
-st.subheader("Una pequeña Fábula.")
-st.write('¡Ay! -dijo el ratón-. El mundo se hace cada día más pequeño. Al principio era tan grande que le tenía miedo. '  
-         ' Corría y corría y por cierto que me alegraba ver esos muros, a diestra y siniestra, en la distancia. ' 
-         ' Pero esas paredes se estrechan tan rápido que me encuentro en el último cuarto y ahí en el rincón está '  
-         ' la trampa sobre la cual debo pasar. Todo lo que debes hacer es cambiar de rumbo dijo el gato...y se lo comió. ' 
-         '\n\n Franz Kafka.')
-           
-st.markdown("¿Quieres escucharlo? Copia el texto o escribe el tuyo.")
-text = st.text_area("Ingrese el texto a escuchar:")
+st.subheader("Reflexión del Día ✨")
+st.write('Respira profundamente. Recuerda que cada día es una nueva oportunidad para empezar de nuevo. '  
+         'No importa qué tan lento parezca tu progreso, lo importante es que sigues avanzando. ' 
+         'Eres más fuerte de lo que crees, tienes la capacidad de superar los retos y mereces '  
+         'todo lo bueno que el universo tiene para ti. Confía en tu proceso, suelta lo que no puedes ' 
+         'controlar y abraza el momento presente.' 
+         '\n\n- Tu voz interior.'
+        )
+            
+st.markdown(f"¿Necesitas escuchar esto hoy? Copia el texto de arriba o escribe tus propias palabras.")
+text = st.text_area("Ingresa el mensaje que necesitas escuchar hoy:")
 
-# Selección de idioma
-option_lang = st.selectbox("Selecciona el lenguaje", ("Español", "English"))
-lg = 'es' if option_lang == "Español" else 'en'
+tld='com'
+option_lang = st.selectbox(
+    "Selecciona el idioma de tu voz:",
+    ("Español", "English"))
 
-# Función para generar el audio base con gTTS
-def text_to_speech(text, lg):
-    tts = gTTS(text, lang=lg)
-    # Generar un nombre de archivo seguro
-    my_file_name = "".join(x for x in text[0:15] if x.isalnum())
-    if not my_file_name:
+if option_lang=="Español":
+    lg='es'
+if option_lang=="English":
+    lg='en'
+
+
+# --- LÓGICA DE TEXT TO SPEECH (INTACTA) ---
+def text_to_speech(text, tld, lg):
+    
+    tts = gTTS(text,lang=lg) # tts = gTTS(text,'en', tld, slow=False)
+    try:
+        my_file_name = text[0:20]
+    except:
         my_file_name = "audio"
+    tts.save(f"temp/{my_file_name}.mp3")
+    return my_file_name, text
+
+
+#display_output_text = st.checkbox("Verifica el texto")
+
+if st.button("Escuchar Mensaje"):
+     result, output_text = text_to_speech(text, 'com',lg)#'tld
+     audio_file = open(f"temp/{result}.mp3", "rb")
+     audio_bytes = audio_file.read()
+     st.markdown(f"## Tu audio de bienestar:")
+     st.audio(audio_bytes, format="audio/mp3", start_time=0)
+
+     #if display_output_text:
+     
+     #st.write(f" {output_text}")
     
-    base_path = f"temp/{my_file_name}.mp3"
-    tts.save(base_path)
-    return base_path, my_file_name
+#if st.button("ElevenLAabs",key=2):
+#     from elevenlabs import play
+#     from elevenlabs.client import ElevenLabs
+#     client = ElevenLabs(api_key="a71bb432d643bbf80986c0cf0970d91a", # Defaults to ELEVEN_API_KEY)
+#     audio = client.generate(text=f" {output_text}",voice="Rachel",model="eleven_multilingual_v1")
+#     audio_file = open(f"temp/{audio}.mp3", "rb")
 
-# Función para aplicar efectos de sonido
-def aplicar_efecto(audio_path, efecto):
-    audio = AudioSegment.from_mp3(audio_path)
-    
-    if efecto == "Rápido":
-        # Aumenta la velocidad (y hace la voz más aguda)
-        nuevo_frame_rate = int(audio.frame_rate * 1.5)
-        audio = audio._spawn(audio.raw_data, overrides={'frame_rate': nuevo_frame_rate}).set_frame_rate(audio.frame_rate)
-    
-    elif efecto == "Lento":
-        # Disminuye la velocidad (y hace la voz más grave)
-        nuevo_frame_rate = int(audio.frame_rate * 0.7)
-        audio = audio._spawn(audio.raw_data, overrides={'frame_rate': nuevo_frame_rate}).set_frame_rate(audio.frame_rate)
-    
-    elif efecto == "Eco":
-        # Crea un eco superponiendo el audio con un retraso y menor volumen
-        eco = audio - 10  # Reducimos 10 decibelios
-        audio = audio.overlay(eco, position=300)  # Retraso de 300 ms
-        
-    elif efecto == "Reversa":
-        # Invierte el audio
-        audio = audio.reverse()
+     with open(f"temp/{result}.mp3", "rb") as f:
+         data = f.read()
 
-    # Guardar el nuevo archivo con el efecto aplicado
-    nuevo_path = audio_path.replace(".mp3", f"_{efecto}.mp3")
-    audio.export(nuevo_path, format="mp3")
-    return nuevo_path
+     def get_binary_file_downloader_html(bin_file, file_label='File'):
+        bin_str = base64.b64encode(data).decode()
+        href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file)}">Download {file_label}</a>'
+        return href
+     st.markdown(get_binary_file_downloader_html("audio.mp3", file_label="Audio File"), unsafe_allow_html=True)
 
-# Botones de efectos
-st.write("### Selecciona el efecto y genera el audio:")
-col1, col2, col3, col4, col5 = st.columns(5)
-
-efecto_seleccionado = None
-
-with col1:
-    if st.button("Normal"): efecto_seleccionado = "Normal"
-with col2:
-    if st.button("Rápido"): efecto_seleccionado = "Rápido"
-with col3:
-    if st.button("Lento"): efecto_seleccionado = "Lento"
-with col4:
-    if st.button("Eco"): efecto_seleccionado = "Eco"
-with col5:
-    if st.button("Reversa"): efecto_seleccionado = "Reversa"
-
-# Si el usuario hace clic en algún botón
-if efecto_seleccionado:
-    if text.strip() == "":
-        st.warning("Por favor, ingresa un texto primero.")
-    else:
-        with st.spinner("Generando audio..."):
-            # 1. Generar audio base
-            base_path, file_name = text_to_speech(text, lg)
-            
-            # 2. Aplicar el efecto seleccionado
-            final_path = aplicar_efecto(base_path, efecto_seleccionado)
-            
-            # 3. Mostrar el reproductor de audio
-            with open(final_path, "rb") as audio_file:
-                audio_bytes = audio_file.read()
-                st.markdown(f"## Tu audio ({efecto_seleccionado}):")
-                st.audio(audio_bytes, format="audio/mp3")
-
-                # 4. Botón de descarga de Streamlit (más moderno y seguro que HTML custom)
-                st.download_button(
-                    label=f"Descargar Audio {efecto_seleccionado}",
-                    data=audio_bytes,
-                    file_name=f"{file_name}_{efecto_seleccionado}.mp3",
-                    mime="audio/mp3"
-                )
-
-# Limpieza de archivos antiguos
 def remove_files(n):
-    mp3_files = glob.glob("temp/*.mp3")
-    if mp3_files:
+    mp3_files = glob.glob("temp/*mp3")
+    if len(mp3_files) != 0:
         now = time.time()
         n_days = n * 86400
         for f in mp3_files:
